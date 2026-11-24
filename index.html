@@ -18,17 +18,19 @@ const przyspieszenie = -1.02; // o ile przyspiesza kulka
 const imgKulka = new Image();
 imgKulka.src ='kulka.png';
 
+let stanGry = 'MENU';
+let najlepszyWynik = localStorage.getItem('arkanoidHighScore') || 0; 
 let zycia = 3;
 let czyKulkaNaPaletce = true;
 
 // Cegie³ki 
 const liczbaWierszy = 10;
 const liczbaKolumn = 10;
-const szerokoscCegly = 85;
+const szerokoscCegly = 100;
 const wysokoscCegly = 25;
-const odstepCegly = 10;
-const marginesGorny = 50;
-const marginesLewy = 30;
+const odstepCegly = 0;
+const marginesGorny = 75;
+const marginesLewy = 0;
 const imgCeglaZielona = new Image();
 imgCeglaZielona.src ='cegielkaZ.jpg';
 const imgCeglaPomaranczowa = new Image();
@@ -49,16 +51,16 @@ let poziom = 1
 //#####################  POZIOMY ########################
 const mapyPoziomow = {
     1: [
-		[3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-		[2, 2, 2, 2, 2, 2, 2, 2, 2, 2],// Rz¹d 0 (czerwone), // Rz¹d 1 (pomarañczowe), // Rz¹d 2 (zielone)
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  // Rz¹d 3 (zielone)
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+        [5, 0, 5, 0, 5, 5, 0, 5, 0, 5],  
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[0, 0, 5, 0, 5, 5, 0, 5, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0]
 		],
     2: [
 		[0, 0, 0, 3, 3, 3, 3, 0, 0, 0],
@@ -108,6 +110,18 @@ const mapyPoziomow = {
 		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0],
 		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0]
 		],
+	6: [
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+        [5, 0, 5, 0, 5, 5, 0, 5, 0, 5],  
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[0, 0, 5, 0, 5, 5, 0, 5, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0]
+		],		
 };
 // generowanie cegie³ek
 function generujPoziom(numerPoziomu) {
@@ -156,6 +170,11 @@ let kulki = [
 
 // Sterowanie klawiatur¹
 window.addEventListener('keydown', function(event) {
+    if (stanGry === 'MENU' && event.key === 'Enter') {
+        stanGry = 'GRA';
+        odtworzDzwiek(440);
+        return; // wychodzimy, ¿eby nie odpalaæ spacji w tej samej milisekundzie
+    }
     if (event.key === 'ArrowRight') prawoWcisniete = true;
     if (event.key === 'ArrowLeft')  lewoWcisniete = true;
 	if (event.key === 'p' || event.key === 'P') {
@@ -163,7 +182,7 @@ window.addEventListener('keydown', function(event) {
 	odtworzDzwiek(220);
 	}
 	//wystrzekeni kulki
-	if (event.key === ' ' && czyKulkaNaPaletce && kulki.length > 0) {
+	if (event.key === ' ' && czyKulkaNaPaletce && kulki.length > 0 && stanGry === 'GRA') {
     czyKulkaNaPaletce = false;
     kulki[0].predkoscX = -5; // Nadajemy startow¹ prêdkoœæ
     kulki[0].predkoscY = -5;
@@ -235,9 +254,26 @@ function animacja() {
 
         sprawdzKolizjeZCegielkami(k); 
 
-        // --- Odbijanie od œcian ---
-        if (k.x + k.promien > canvas.width || k.x - k.promien < 0) k.predkoscX *= -1.005;
-        if (k.y - k.promien < 0) k.predkoscY *= -1;
+		// Prawa œciana
+        if (k.x + k.promien > canvas.width) {
+            k.x = canvas.width - k.promien; // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
+            k.predkoscX *= przyspieszenie;               // Odwracamy kierunek
+            odtworzDzwiek(330);
+        }
+        
+        // Lewa œciana
+        if (k.x - k.promien < 0) {
+            k.x = k.promien;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
+            k.predkoscX *= przyspieszenie;               // Odwracamy kierunek
+            odtworzDzwiek(330);
+        }
+        
+        // Górna œciana (Sufit)
+        if (k.y - k.promien < 0) {
+            k.y = k.promien;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
+            k.predkoscY *= przyspieszenie;               // Odwracamy kierunek
+            odtworzDzwiek(330);
+        }
 
         // --- Odbijanie od paletki ---
         if (k.y + k.promien >= yP && k.y < yP + 40 && k.x >= xP && k.x <= xP + szerokoscPaletki && !czyKulkaNaPaletce) {
@@ -324,11 +360,33 @@ function sprawdzKolizjeZCegielkami(k) {
                     k.y + k.promien > b.y &&
                     k.y - k.promien < b.y + wysokoscCegly
                 ) {
-                    k.predkoscY *= -1; // Odbijamy kulkê
+                    // 2. OBLICZAMY G£ÊBOKOŒÆ WNIKANIA Z KA¯DEJ STRONY
+                    // Ile kulka wesz³a w klocek od lewej, prawej, góry i do³u
+                    let wejscieZLewej   = (k.x + k.promien) - b.x;
+                    let wejscieZPrawej  = (b.x + szerokoscCegly) - (k.x - k.promien);
+                    let wejscieZGory    = (k.y + k.promien) - b.y;
+                    let wejscieZDolu    = (b.y + wysokoscCegly) - (k.y - k.promien);
+
+                    // Szukamy najmniejszej wartoœci — to ona wskazuje œcianê, w któr¹ uderzyliœmy!
+                    let minX = Math.min(wejscieZLewej, wejscieZPrawej);
+                    let minY = Math.min(wejscieZGory, wejscieZDolu);
+					
+                    if (minX < minY) {
+                        // Uderzenie w BOK klocka (wnikniêcie X jest mniejsze ni¿ Y)
+                        k.predkoscX *= -1; 
+                    } else {
+                        // Uderzenie w GÓRÊ lub DÓ£ klocka
+                        k.predkoscY *= -1; 
+                    }	
                     b.zycia--;
 					odtworzDzwiek(440);
                     if (b.zycia === 0) {
                         punkty++;
+						if (punkty > najlepszyWynik) {
+							najlepszyWynik = punkty;
+							// Zapisujemy nowy rekord na sta³e w pamiêci przegl¹darki!
+							localStorage.setItem('arkanoidHighScore', najlepszyWynik);
+						}
 
                         // 25% szans na wypadniêcie bonusu
                         if (Math.random() < 0.25) {
@@ -462,12 +520,36 @@ function sprawdzCzyKlockiZostaly() {
 		odtworzDzwiek(480);
 		odtworzDzwiek(350);
 	} else {
-	
+		odtworzDzwiek(587);
+		odtworzDzwiek(660);
+		odtworzDzwiek(480);
+		odtworzDzwiek(350);
     czyWygrana = true;
 	}
 }
 
 function rysujWynik() {
+if (stanGry === 'MENU') {
+        // --- EKRAN MENU STARTOWEGO ---
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Przyciemniamy t³o
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ffa502'; // Z³oty kolor tytu³u
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('ARKANOID', canvas.width / 2, canvas.height / 3);
+
+        ctx.fillStyle = 'white';
+        ctx.font = '25px Arial';
+        ctx.fillText('Wciœnij ENTER, aby rozpocz¹æ grê', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('Sterowanie: Strza³ki (ruch) | Spacja (strza³) | P (pauza)', canvas.width / 2, canvas.height / 2 + 50);
+
+        // Wyœwietlamy wczytany rekord ¿yciowy
+        ctx.fillStyle = '#2ed573';
+        ctx.fillText(`NAJLEPSZY WYNIK: ${najlepszyWynik}`, canvas.width / 2, canvas.height / 2 + 130);
+    } 
+    
+    else if (stanGry === 'GRA') {
     ctx.fillStyle = '#333333';
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'left';
@@ -497,6 +579,7 @@ function rysujWynik() {
         ctx.textAlign = 'center';
         ctx.fillText('KONIEC GRY!', canvas.width / 2, canvas.height / 2);
     }
+}
 }
 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
