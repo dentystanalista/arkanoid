@@ -12,6 +12,14 @@
 
 const canvas = document.getElementById('plansza');
 const ctx = canvas.getContext('2d');
+const tlaPoziomow = [
+    '',
+    'chmurki.jpg', // Twoje obecne niebo/kosmos dla poziomu 1
+    'chmurki2.jpg',  // Nowy plik graficzny dla poziomu 2
+	'chmurki.jpg',
+	'chmurki.jpg',
+	'chmurki.jpg'
+];
 
 const predkosc = 15;
 const przyspieszenie = -1.02; // o ile przyspiesza kulka
@@ -51,16 +59,16 @@ let poziom = 1
 //#####################  POZIOMY ########################
 const mapyPoziomow = {
     1: [
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-        [5, 0, 5, 0, 5, 5, 0, 5, 0, 5],  
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
-		[0, 0, 5, 0, 5, 5, 0, 5, 0, 0],
-		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0],
-		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0]
+		[3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+		[2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		],
     2: [
 		[0, 0, 0, 3, 3, 3, 3, 0, 0, 0],
@@ -144,6 +152,8 @@ function generujPoziom(numerPoziomu) {
             };
         }
     }
+	canvas.style.backgroundImage = `url('${tlaPoziomow[numerPoziomu]}')`;
+	canvas.style.backgroundSize = 'cover'; // ¯eby ³adnie rozci¹ga³o
 }
 
 generujPoziom(1);
@@ -269,8 +279,8 @@ function animacja() {
         }
         
         // Górna œciana (Sufit)
-        if (k.y - k.promien < 0) {
-            k.y = k.promien;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
+        if (k.y - k.promien < 40) {
+            k.y = k.promien+40;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
             k.predkoscY *= przyspieszenie;               // Odwracamy kierunek
             odtworzDzwiek(330);
         }
@@ -550,18 +560,21 @@ if (stanGry === 'MENU') {
     } 
     
     else if (stanGry === 'GRA') {
-    ctx.fillStyle = '#333333';
+	ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Czarny z przezroczystoœci¹ 40%
+    ctx.fillRect(0, 0, canvas.width, 40);
+	
+    ctx.fillStyle = 'white';
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`Punkty: ${punkty}`, 20, 30);
 	
-	ctx.fillStyle = '#333333';
+	ctx.fillStyle = 'white';
 	ctx.font = 'bold 20px Arial';
 	ctx.textAlign = 'right'; // Do prawej krawêdzi
 	ctx.fillText(`¯ycia: ${zycia}`, canvas.width - 20, 30);
 	
 	///numer poziomu
-	ctx.fillStyle = '#333333';
+	ctx.fillStyle = 'white';
 	ctx.font = 'bold 20px Arial';
 	ctx.textAlign = 'center';
 	ctx.fillText(`Poziom: ${poziom}`, canvas.width / 2, 30);
