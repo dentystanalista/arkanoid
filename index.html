@@ -1,0 +1,537 @@
+<html>
+
+<head>
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<canvas id="plansza" height="800" width="1000"></canvas>
+
+<script>
+
+const canvas = document.getElementById('plansza');
+const ctx = canvas.getContext('2d');
+
+const predkosc = 15;
+const przyspieszenie = -1.02; // o ile przyspiesza kulka
+const imgKulka = new Image();
+imgKulka.src ='kulka.png';
+
+let zycia = 3;
+let czyKulkaNaPaletce = true;
+
+// Cegie³ki 
+const liczbaWierszy = 10;
+const liczbaKolumn = 10;
+const szerokoscCegly = 85;
+const wysokoscCegly = 25;
+const odstepCegly = 10;
+const marginesGorny = 50;
+const marginesLewy = 30;
+const imgCeglaZielona = new Image();
+imgCeglaZielona.src ='cegielkaZ.jpg';
+const imgCeglaPomaranczowa = new Image();
+imgCeglaPomaranczowa.src ='cegielkaP.jpg';
+const imgCeglaCzerwona = new Image();
+imgCeglaCzerwona.src ='cegielkaC.jpg';
+const imgCeglaNiebieska = new Image();
+imgCeglaNiebieska.src ='cegielkaN.jpg';
+const imgCeglaFioletowa = new Image();
+imgCeglaFioletowa.src ='cegielkaF.jpg';
+
+let prawoWcisniete = false;
+let lewoWcisniete = false;
+let cegielki = [];
+let bonusy = [];
+let punkty = 0;
+let poziom = 1
+//#####################  POZIOMY ########################
+const mapyPoziomow = {
+    1: [
+		[3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+		[2, 2, 2, 2, 2, 2, 2, 2, 2, 2],// Rz¹d 0 (czerwone), // Rz¹d 1 (pomarañczowe), // Rz¹d 2 (zielone)
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  // Rz¹d 3 (zielone)
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		],
+    2: [
+		[0, 0, 0, 3, 3, 3, 3, 0, 0, 0],
+		[0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],  
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[3, 3, 0, 0, 0, 0, 0, 0, 3, 3],
+		[4, 4, 0, 0, 0, 0, 0, 0, 4, 4],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		],
+	3: [
+		[0, 3, 3, 3, 3, 3, 3, 3, 3, 0],
+		[0, 3, 0, 0, 0, 0, 0, 0, 3, 0],
+        [0, 3, 0, 2, 2, 2, 2, 0, 3, 0],  
+		[0, 3, 0, 2, 0, 0, 2, 0, 3, 0],
+		[0, 3, 0, 2, 0, 0, 2, 0, 3, 0],
+		[0, 3, 0, 2, 2, 2, 2, 0, 3, 0],
+		[0, 3, 0, 0, 0, 0, 0, 0, 3, 0],
+		[0, 3, 3, 3, 3, 3, 3, 3, 3, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+		],
+	4: [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[1, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  
+		[5, 5, 5, 5, 5, 5, 5, 5, 5, 1],
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[1, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[5, 5, 5, 5, 5, 5, 5, 5, 5, 1],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		],
+	5: [
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+        [5, 0, 5, 0, 5, 5, 0, 5, 0, 5],  
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[5, 0, 5, 0, 5, 5, 0, 5, 0, 5],
+		[0, 0, 5, 0, 5, 5, 0, 5, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0],
+		[0, 0, 0, 0, 5, 5, 0, 0, 0, 0]
+		],
+};
+// generowanie cegie³ek
+function generujPoziom(numerPoziomu) {
+    cegielki = []; // Czyœcimy star¹ tablicê klocków
+    let mapa = mapyPoziomow[numerPoziomu];
+
+    for (let c = 0; c < liczbaKolumn; c++) {
+        cegielki[c] = [];
+        for (let r = 0; r < liczbaWierszy; r++) {
+            let ceglaX = c * (szerokoscCegly + odstepCegly) + marginesLewy;
+            let ceglaY = r * (wysokoscCegly + odstepCegly) + marginesGorny;
+
+            // Pobieramy ¿ycie z naszej mapy (rz¹d r, kolumna c)
+            let zyciaZMapy = mapa[r][c];
+
+            cegielki[c][r] = {
+                x: ceglaX,
+                y: ceglaY,
+                zycia: zyciaZMapy // Jeœli w mapie jest 0, klocek od razu bêdzie "martwy"
+            };
+        }
+    }
+}
+
+generujPoziom(1);
+
+let czyWygrana = false;
+let czyKoniecGry = false;
+let czyPauza = false;
+
+let szerokoscPaletki = 200;
+let xP = canvas.width / 2 - szerokoscPaletki/2;
+let yP = 700;
+
+// Tablica kulek
+let kulki = [
+    {
+        x: xP + szerokoscPaletki / 2 / 2,
+        y: yP - 15,
+        predkoscX: -0,
+        predkoscY: -0,
+        promien: 15
+    }
+];
+
+
+// Sterowanie klawiatur¹
+window.addEventListener('keydown', function(event) {
+    if (event.key === 'ArrowRight') prawoWcisniete = true;
+    if (event.key === 'ArrowLeft')  lewoWcisniete = true;
+	if (event.key === 'p' || event.key === 'P') {
+	czyPauza = !czyPauza;
+	odtworzDzwiek(220);
+	}
+	//wystrzekeni kulki
+	if (event.key === ' ' && czyKulkaNaPaletce && kulki.length > 0) {
+    czyKulkaNaPaletce = false;
+    kulki[0].predkoscX = -5; // Nadajemy startow¹ prêdkoœæ
+    kulki[0].predkoscY = -5;
+    odtworzDzwiek(330);      // DŸwiêk startu!
+    }
+});
+window.addEventListener('keyup', function(event) {
+    if (event.key === 'ArrowRight') prawoWcisniete = false;
+    if (event.key === 'ArrowLeft')  lewoWcisniete = false;
+});
+
+// Obs³uga dotyku na telefonie
+canvas.addEventListener('touchmove', function(event) {
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    let skala = canvas.width / rect.width;
+    let dotykX = (event.touches[0].clientX - rect.left) * skala;
+
+    xP = dotykX - (szerokoscPaletki / 2);
+
+    if (xP < 0) xP = 0;
+    if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
+}, { passive: false });
+
+/////////////////// FUNKCJA ANIMACJA
+function animacja() {
+	if (czyPauza) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.005)'; // Pó³przezroczyste czarne t³o (przyciemnienie gry)
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 50px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUZA', canvas.width / 2, canvas.height / 2);
+
+        // WA¯NE: Prosimy o kolejn¹ klatkê, ¿eby komputer ca³y czas nas³uchiwa³, 
+        // czy nie wciœniesz "P" ponownie, aby odblokowaæ grê!
+        requestAnimationFrame(animacja);
+        return; // Przerywamy wykonywanie dalszej czêœci funkcji (kulki stoj¹ w miejscu!)
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // czyœæ ekran
+
+    // P³ynny ruch paletki
+    if (prawoWcisniete) xP += predkosc;
+    if (lewoWcisniete)  xP -= predkosc;
+
+    if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
+    if (xP < 0) xP = 0;
+	// kulka na paletce
+	if (czyKulkaNaPaletce && kulki.length > 0) {
+    kulki[0].x = xP + szerokoscPaletki / 2;
+    kulki[0].y = yP - kulki[0].promien;
+}
+	
+    obslugaBonusow();
+    rysujCegielki();
+    Paletka();
+
+    // Pêtla dla obs³ugi ruchu i kolizji kulek
+    for (let i = kulki.length - 1; i >= 0; i--) {
+        let k = kulki[i];
+        
+        // Zatrzymanie ruchu kulek po wygranej/przegranej
+        if (!czyWygrana && !czyKoniecGry) {
+            k.x += k.predkoscX;
+            k.y += k.predkoscY;
+        }
+
+        sprawdzKolizjeZCegielkami(k); 
+
+        // --- Odbijanie od œcian ---
+        if (k.x + k.promien > canvas.width || k.x - k.promien < 0) k.predkoscX *= -1.005;
+        if (k.y - k.promien < 0) k.predkoscY *= -1;
+
+        // --- Odbijanie od paletki ---
+        if (k.y + k.promien >= yP && k.y < yP + 40 && k.x >= xP && k.x <= xP + szerokoscPaletki && !czyKulkaNaPaletce) {
+            let punktTrafienia = k.x - (xP + (szerokoscPaletki / 2));
+            let znormalizowaneTrafienie = punktTrafienia / (szerokoscPaletki / 2);
+            let katOdbicia = znormalizowaneTrafienie * (Math.PI / 3);
+            let aktualnaPredkosc = Math.sqrt(k.predkoscX ** 2 + k.predkoscY ** 2);
+
+            k.predkoscX = aktualnaPredkosc * Math.sin(katOdbicia) * 1.005;
+            k.predkoscY = -aktualnaPredkosc * Math.cos(katOdbicia) * 1.005;
+			odtworzDzwiek(180);
+        }
+
+        // --- SPADEK W PRZEPAŒÆ ---
+        if (k.y - k.promien > canvas.height) {
+            kulki.splice(i, 1); // Usuwamy tê konkretn¹ kulkê
+
+            // Jeœli to by³a OSTATNIA kulka na ekranie -> Przegrana!
+            if (kulki.length === 0 && !czyWygrana) {
+				zycia--;
+				
+                if (zycia > 0) {
+            // Reaktywujemy jedn¹ kulkê na paletce
+            czyKulkaNaPaletce = true;
+            kulki.push({
+                x: xP + szerokoscPaletki / 2,
+                y: yP - 15,
+                predkoscX: 0,
+                predkoscY: 0,
+                promien: 15
+            });
+			} else {
+            czyKoniecGry = true; // Prawdziwy koniec gry po stracie 3 ¿yæ
+			}
+		}	
+           continue;
+        }
+    }
+
+    rysujKulki();
+    sprawdzCzyKlockiZostaly();
+    rysujWynik();
+
+    requestAnimationFrame(animacja);
+}
+
+function rysujKulki() {
+    ctx.fillStyle = 'black';
+    for (let i = 0; i < kulki.length; i++) {
+        let k = kulki[i];
+        let obrazekK = imgKulka;
+        ctx.drawImage(obrazekK, k.x-15, k.y-15, k.promien * 2, k.promien * 2);
+    }
+}
+
+function Paletka() {
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(xP, yP, szerokoscPaletki, 40);
+}
+
+function rysujCegielki() {
+    const grafikiCegiel = [null, imgCeglaZielona, imgCeglaPomaranczowa, imgCeglaCzerwona, imgCeglaNiebieska, imgCeglaFioletowa];
+    for (let c = 0; c < liczbaKolumn; c++) {
+        for (let r = 0; r < liczbaWierszy; r++) {
+            let b = cegielki[c][r];
+            if (b && b.zycia > 0 && grafikiCegiel[b.zycia]) {
+				let obrazek = grafikiCegiel[b.zycia];
+                ctx.drawImage(obrazek, b.x, b.y, szerokoscCegly, wysokoscCegly);
+            }
+        }
+    }
+}
+
+
+function sprawdzKolizjeZCegielkami(k) {
+    for (let c = 0; c < liczbaKolumn; c++) {
+        for (let r = 0; r < liczbaWierszy; r++) {
+            let b = cegielki[c][r];
+
+            if (b.zycia > 0) {
+                if (
+                    k.x + k.promien > b.x &&
+                    k.x - k.promien < b.x + szerokoscCegly &&
+                    k.y + k.promien > b.y &&
+                    k.y - k.promien < b.y + wysokoscCegly
+                ) {
+                    k.predkoscY *= -1; // Odbijamy kulkê
+                    b.zycia--;
+					odtworzDzwiek(440);
+                    if (b.zycia === 0) {
+                        punkty++;
+
+                        // 25% szans na wypadniêcie bonusu
+                        if (Math.random() < 0.25) {
+                            let losSzansy = Math.random();
+                            let wybranyTyp = '';
+                            let kolorBonusu = '';
+                            
+                            if (losSzansy < 0.4) {
+                                wybranyTyp = 'duzaPaletka';
+                                kolorBonusu = '#a040ff';
+                            } else if (losSzansy < 0.8) {
+                                wybranyTyp = 'wolnaKulka';
+                                kolorBonusu = '#2ed573';
+                            } else {
+                                wybranyTyp = 'trzyKulki';
+                                kolorBonusu = '#ffa502'; // z³oty
+                            }
+
+                            bonusy.push({
+                                x: b.x + szerokoscCegly / 2,
+                                y: b.y,
+                                promien: 10,
+                                predkoscY: 3,
+                                typ: wybranyTyp,
+                                kolor: kolorBonusu
+                            });
+                        }
+                    }
+					return;
+                }
+            }
+        }
+    }
+}
+
+function obslugaBonusow() {
+    if (czyWygrana || czyKoniecGry) return;
+
+    for (let i = bonusy.length - 1; i >= 0; i--) {
+        let bon = bonusy[i];
+        bon.y += bon.predkoscY;
+
+        ctx.beginPath();
+        ctx.arc(bon.x, bon.y, bon.promien, 0, 2 * Math.PI);
+        ctx.fillStyle = bon.kolor;
+        ctx.fill();
+        ctx.closePath();
+
+        // KOLIZJA: Czy paletka z³apa³a bonus?
+        if (bon.y + bon.promien >= yP && bon.y <= yP + 40 && bon.x >= xP && bon.x <= xP + szerokoscPaletki) {
+            
+            if (bon.typ === 'duzaPaletka') {
+                if (szerokoscPaletki < 350) {
+                    szerokoscPaletki += 40;
+                    setTimeout(function() { szerokoscPaletki -= 40; }, 10000);
+                }
+            } 
+            else if (bon.typ === 'wolnaKulka') {
+                for (let j = 0; j < kulki.length; j++) {
+                    kulki[j].predkoscX *= 0.6;
+                    kulki[j].predkoscY *= 0.6;
+                }
+                setTimeout(function() {
+                    for (let j = 0; j < kulki.length; j++) {
+                        kulki[j].predkoscX /= 0.65;
+                        kulki[j].predkoscY /= 0.65;
+                    }
+                }, 10000);
+            } 
+            else if (bon.typ === 'trzyKulki') {
+                if (kulki.length > 0) {
+                    let baza = kulki[0]; // Bierzemy pierwsz¹ jako punkt odniesienia
+                    
+                    kulki.push({
+                        x: baza.x,
+                        y: baza.y,
+                        predkoscX: -5,
+                        predkoscY: -6,
+                        promien: baza.promien
+                    });
+
+                    kulki.push({
+                        x: baza.x,
+                        y: baza.y,
+                        predkoscX: 5,
+                        predkoscY: -6,
+                        promien: baza.promien
+                    });
+                }
+            }
+
+            bonusy.splice(i, 1);
+            continue;
+        }
+
+        if (bon.y > canvas.height) {
+            bonusy.splice(i, 1);
+        }
+    }
+}
+
+function sprawdzCzyKlockiZostaly() {
+    if (czyWygrana || czyKoniecGry) return;
+
+    for (let c = 0; c < liczbaKolumn; c++) {
+        for (let r = 0; r < liczbaWierszy; r++) {
+            if (cegielki[c][r].zycia > 0) {
+                return;
+            }
+        }
+    }
+	if (mapyPoziomow[poziom + 1]) {
+    poziom++; // Zwiêkszamy numer poziomu (np. z 2 na 3)
+    generujPoziom(poziom); // £adujemy now¹ mapê
+    
+    // Reset kulki i paletki (Twój dotychczasowy kod)
+		czyKulkaNaPaletce = true;
+        bonusy = []; // Czyœcimy spadaj¹ce bonusy
+        szerokoscPaletki = 200; // Resetujemy szerokoœæ paletki
+        kulki = [
+			{
+                x: xP + szerokoscPaletki / 2,
+                y: yP - 15,
+                predkoscX: 0,
+                predkoscY: 0,
+                promien: 15
+            }
+		];
+		odtworzDzwiek(587);
+		odtworzDzwiek(660);
+		odtworzDzwiek(480);
+		odtworzDzwiek(350);
+	} else {
+	
+    czyWygrana = true;
+	}
+}
+
+function rysujWynik() {
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Punkty: ${punkty}`, 20, 30);
+	
+	ctx.fillStyle = '#333333';
+	ctx.font = 'bold 20px Arial';
+	ctx.textAlign = 'right'; // Do prawej krawêdzi
+	ctx.fillText(`¯ycia: ${zycia}`, canvas.width - 20, 30);
+	
+	///numer poziomu
+	ctx.fillStyle = '#333333';
+	ctx.font = 'bold 20px Arial';
+	ctx.textAlign = 'center';
+	ctx.fillText(`Poziom: ${poziom}`, canvas.width / 2, 30);
+	
+    if (czyWygrana) {
+        ctx.fillStyle = '#2ed573';
+        ctx.font = 'bold 45px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('WYGRANA! GRATULACJE!', canvas.width / 2, canvas.height / 2);
+    }
+
+    if (czyKoniecGry) {
+        ctx.fillStyle = 'red';
+        ctx.font = 'bold 55px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('KONIEC GRY!', canvas.width / 2, canvas.height / 2);
+    }
+}
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+	
+function odtworzDzwiek(czestotliwosc) {
+    // Tworzymy systemowy kontekst audio
+
+	
+	if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+    }
+    
+    // Tworzymy oscylator (generator fali dŸwiêkowej) i wyciszenie
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = 'triangle'; // Styl retro (trójk¹tna fala – brzmi jak GameBoy)
+    oscillator.frequency.setValueAtTime(czestotliwosc, audioCtx.currentTime);
+    
+    // Szybkie wyciszenie dŸwiêku po 0.1 sekundy, ¿eby nie piszcza³o za d³ugo
+    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); // g³oœnoœæ 30%
+    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+    
+    // £¹czymy klocki i odpalamy
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
+// Odpalamy g³ówn¹ pêtlê
+animacja();
+
+</script>
+</body>
+
+</html>

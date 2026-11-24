@@ -1,0 +1,13 @@
+body {
+   
+	background-color: "black";   /* kolor t³a strony */
+
+	font-family: Arial, sans-serif; /* krój pisma */
+	margin: 0;                   /* resetowanie domyœlnych marginesów */
+
+}
+#plansza {
+	background-image: url('chmurki.jpg');
+	background-size: cover;
+ 
+}
