@@ -1,13 +1,13 @@
 body {
-   
-	background-color: "black";   /* kolor t³a strony */
-
-	font-family: Arial, sans-serif; /* krój pisma */
-	margin: 0;                   /* resetowanie domyœlnych marginesów */
-
+    margin: 0;
+    padding: 0;
+    overflow: hidden;     /* Ca³kowicie blokuje paski przewijania (strona nigdy nie drgnie na boki) */
+    background-color: #111; /* Ciemne t³o wokó³ planszy gry */
 }
 #plansza {
-	background-image: url('chmurki.jpg');
-	background-size: cover;
- 
+    display: block;
+    margin: 0 auto;       /* Idealne wyœrodkowanie gry na ekranie komputera */
+    max-width: 100%;      /* Jeœli ekran jest mniejszy ni¿ 800px, skurcz grê do szerokoœci ekranu */
+    max-height: 100vh;    /* Pilnuje, ¿eby gra nie by³a wy¿sza ni¿ wysokoœæ ekranu */
+    box-sizing: border-box;
 }

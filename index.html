@@ -2,6 +2,8 @@
 
 <head>
 	<link rel="stylesheet" href="style.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 </head>
 
 <body>
@@ -22,7 +24,7 @@ const tlaPoziomow = [
 ];
 
 const predkosc = 15;
-const przyspieszenie = -1.02; // o ile przyspiesza kulka
+const przyspieszenie = 0.01; // o ile przyspiesza kulka
 const imgKulka = new Image();
 imgKulka.src ='kulka.png';
 
@@ -49,6 +51,8 @@ const imgCeglaNiebieska = new Image();
 imgCeglaNiebieska.src ='cegielkaN.jpg';
 const imgCeglaFioletowa = new Image();
 imgCeglaFioletowa.src ='cegielkaF.jpg';
+const imgCeglaStalowa = new Image();
+imgCeglaStalowa.src = 'cegielkaS.jpg';
 
 let prawoWcisniete = false;
 let lewoWcisniete = false;
@@ -206,16 +210,25 @@ window.addEventListener('keyup', function(event) {
 
 // Obs³uga dotyku na telefonie
 canvas.addEventListener('touchmove', function(event) {
+    // 1. Ca³kowicie blokujemy domyœlne przesuwanie strony przez przegl¹darkê
     event.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    let skala = canvas.width / rect.width;
-    let dotykX = (event.touches[0].clientX - rect.left) * skala;
 
+    const rect = canvas.getBoundingClientRect();
+    
+    // 2. OBLICZAMY SKALÊ: Dzielimy wirtualn¹ szerokoœæ (800) przez realn¹ szerokoœæ na ekranie
+    let skalaX = canvas.width / rect.width;
+
+    // 3. Mno¿ymy pozycjê palca przez skalê, aby uzyskaæ idealny punkt wewn¹trz gry
+    let dotykX = (event.touches[0].clientX - rect.left) * skalaX;
+
+    // 4. Ustawiamy œrodek paletki pod palcem
     xP = dotykX - (szerokoscPaletki / 2);
 
+    // 5. Granice ekranu
     if (xP < 0) xP = 0;
     if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
 }, { passive: false });
+
 
 /////////////////// FUNKCJA ANIMACJA
 function animacja() {
@@ -267,21 +280,21 @@ function animacja() {
 		// Prawa œciana
         if (k.x + k.promien > canvas.width) {
             k.x = canvas.width - k.promien; // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
-            k.predkoscX *= przyspieszenie;               // Odwracamy kierunek
+            k.predkoscX *= -(1+przyspieszenie);               // Odwracamy kierunek
             odtworzDzwiek(330);
         }
         
         // Lewa œciana
         if (k.x - k.promien < 0) {
             k.x = k.promien;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
-            k.predkoscX *= przyspieszenie;               // Odwracamy kierunek
+            k.predkoscX *= -(1+przyspieszenie);               // Odwracamy kierunek
             odtworzDzwiek(330);
         }
         
         // Górna œciana (Sufit)
         if (k.y - k.promien < 40) {
             k.y = k.promien+40;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
-            k.predkoscY *= przyspieszenie;               // Odwracamy kierunek
+            k.predkoscY *= -(1+przyspieszenie);               // Odwracamy kierunek
             odtworzDzwiek(330);
         }
 
@@ -346,7 +359,8 @@ function Paletka() {
 
 function rysujCegielki() {
     const grafikiCegiel = [null, imgCeglaZielona, imgCeglaPomaranczowa, imgCeglaCzerwona, imgCeglaNiebieska, imgCeglaFioletowa];
-    for (let c = 0; c < liczbaKolumn; c++) {
+    grafikiCegiel[99] = imgCeglaStalowa;
+	for (let c = 0; c < liczbaKolumn; c++) {
         for (let r = 0; r < liczbaWierszy; r++) {
             let b = cegielki[c][r];
             if (b && b.zycia > 0 && grafikiCegiel[b.zycia]) {
@@ -383,50 +397,63 @@ function sprawdzKolizjeZCegielkami(k) {
 					
                     if (minX < minY) {
                         // Uderzenie w BOK klocka (wnikniêcie X jest mniejsze ni¿ Y)
-                        k.predkoscX *= -1; 
+                        k.predkoscX *= -(1+przyspieszenie); 
+							if (wejscieZLewej < wejscieZPrawej) {
+                            k.x -= minX; // Wypchnij w lewo
+							} else {
+                            k.x += minX; // Wypchnij w prawo
+							}
+						
                     } else {
                         // Uderzenie w GÓRÊ lub DÓ£ klocka
-                        k.predkoscY *= -1; 
-                    }	
+                        k.predkoscY *= -(1+przyspieszenie); 
+							if (wejscieZGory < wejscieZDolu) {
+                            k.y -= minY; // Wypchnij w górê
+							} else {
+                            k.y += minY; // Wypchnij w dó³
+							}
+                    }
+					if (b.zycia !== 99) {
                     b.zycia--;
 					odtworzDzwiek(440);
-                    if (b.zycia === 0) {
+						if (b.zycia === 0) {
                         punkty++;
 						if (punkty > najlepszyWynik) {
-							najlepszyWynik = punkty;
-							// Zapisujemy nowy rekord na sta³e w pamiêci przegl¹darki!
-							localStorage.setItem('arkanoidHighScore', najlepszyWynik);
+								najlepszyWynik = punkty;
+								// Zapisujemy nowy rekord na sta³e w pamiêci przegl¹darki!
+								localStorage.setItem('arkanoidHighScore', najlepszyWynik);
+							}
+
+							// 25% szans na wypadniêcie bonusu
+							if (Math.random() < 0.25) {
+								let losSzansy = Math.random();
+								let wybranyTyp = '';
+								let kolorBonusu = '';
+								
+								if (losSzansy < 0.4) {
+									wybranyTyp = 'duzaPaletka';
+									kolorBonusu = '#a040ff';
+								} else if (losSzansy < 0.8) {
+									wybranyTyp = 'wolnaKulka';
+									kolorBonusu = '#2ed573';
+								} else {
+									wybranyTyp = 'trzyKulki';
+									kolorBonusu = '#ffa502'; // z³oty
+								}
+
+								bonusy.push({
+									x: b.x + szerokoscCegly / 2,
+									y: b.y,
+									promien: 10,
+									predkoscY: 3,
+									typ: wybranyTyp,
+									kolor: kolorBonusu
+								});
+							}
 						}
-
-                        // 25% szans na wypadniêcie bonusu
-                        if (Math.random() < 0.25) {
-                            let losSzansy = Math.random();
-                            let wybranyTyp = '';
-                            let kolorBonusu = '';
-                            
-                            if (losSzansy < 0.4) {
-                                wybranyTyp = 'duzaPaletka';
-                                kolorBonusu = '#a040ff';
-                            } else if (losSzansy < 0.8) {
-                                wybranyTyp = 'wolnaKulka';
-                                kolorBonusu = '#2ed573';
-                            } else {
-                                wybranyTyp = 'trzyKulki';
-                                kolorBonusu = '#ffa502'; // z³oty
-                            }
-
-                            bonusy.push({
-                                x: b.x + szerokoscCegly / 2,
-                                y: b.y,
-                                promien: 10,
-                                predkoscY: 3,
-                                typ: wybranyTyp,
-                                kolor: kolorBonusu
-                            });
-                        }
-                    }
-					return;
-                }
+						return;
+					}
+				}
             }
         }
     }
@@ -468,25 +495,42 @@ function obslugaBonusow() {
             } 
             else if (bon.typ === 'trzyKulki') {
                 if (kulki.length > 0) {
-                    let baza = kulki[0]; // Bierzemy pierwsz¹ jako punkt odniesienia
+                    // Bierzemy pierwsz¹ lataj¹c¹ kulkê jako bazê (matkê)
+                    let baza = kulki[0]; 
                     
+                    // 1. Wyliczamy ca³kowit¹ prêdkoœæ wypadkow¹ kulki-bazy
+                    let aktualnaPredkosc = Math.sqrt(baza.predkoscX ** 2 + baza.predkoscY ** 2);
+                    
+                    // 2. Wyliczamy aktualny k¹t lotu kulki-bazy za pomoc¹ funkcji Math.atan2
+                    let aktualnyKat = Math.atan2(baza.predkoscY, baza.predkoscX);
+                    
+                    // 3. Definiujemy k¹t rozwarcia: 30 stopni w radianach to Math.PI / 6
+                    let katRozwarcia = Math.PI / 6;
+
+                    // --- KULKA NUMER 2 (Skrêca o 30 stopni w lewo) ---
+                    let katLewo = aktualnyKat - katRozwarcia;
                     kulki.push({
                         x: baza.x,
                         y: baza.y,
-                        predkoscX: -5,
-                        predkoscY: -6,
+                        predkoscX: aktualnaPredkosc * Math.cos(katLewo),
+                        predkoscY: aktualnaPredkosc * Math.sin(katLewo),
                         promien: baza.promien
                     });
 
+                    // --- KULKA NUMER 3 (Skrêca o 30 stopni w prawo) ---
+                    let katPrawo = aktualnyKat + katRozwarcia;
                     kulki.push({
                         x: baza.x,
                         y: baza.y,
-                        predkoscX: 5,
-                        predkoscY: -6,
+                        predkoscX: aktualnaPredkosc * Math.cos(katPrawo),
+                        predkoscY: aktualnaPredkosc * Math.sin(katPrawo),
                         promien: baza.promien
                     });
+                    
+                    odtworzDzwiek(587); // Triumfalny dŸwiêk rozbicia na 3 kulki!
                 }
             }
+
 
             bonusy.splice(i, 1);
             continue;
@@ -503,8 +547,8 @@ function sprawdzCzyKlockiZostaly() {
 
     for (let c = 0; c < liczbaKolumn; c++) {
         for (let r = 0; r < liczbaWierszy; r++) {
-            if (cegielki[c][r].zycia > 0) {
-                return;
+            if (cegielki[c][r] && cegielki[c][r].zycia > 0 && cegielki[c][r].zycia !== 99) {
+                return; // Zosta³y zwyk³e klocki, gramy dalej
             }
         }
     }
