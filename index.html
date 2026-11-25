@@ -209,27 +209,52 @@ window.addEventListener('keyup', function(event) {
 });
 
 // Obs³uga dotyku na telefonie
-canvas.addEventListener('touchmove', function(event) {
-    // 1. Ca³kowicie blokujemy domyœlne przesuwanie strony przez przegl¹darkê
-    event.preventDefault();
+// 1. START GRY I STRZA£ PRZY PIERWSZYM DOTKNIÊCIU (touchstart)
+canvas.addEventListener('touchstart', function(event) {
+    event.preventDefault(); // Blokuje przewijanie strony
+
+    // Rejestrujemy pierwszy punkt dotyku
+    let touch = event.touches[0];
 
     if (stanGry === 'MENU') {
         stanGry = 'GRA';
         odtworzDzwiek(440);
-        return; // Przerywamy, ¿eby nie wystrzeliæ kulki w tej samej milisekundzie!
+        return;
     }
 
-    // 2. Jeœli trwa GRA, a kulka stoi na paletce - dotkniêcie dzia³a jak SPACJA
+    // POPRAWKA: Odwo³ujemy siê do pierwszej kulki w tablicy kulki[0]
     if (stanGry === 'GRA' && czyKulkaNaPaletce && kulki.length > 0) {
         czyKulkaNaPaletce = false;
-        
-        // Szukamy naszej pierwszej kulki w tablicy i nadajemy jej pêd w górê
-        kulki.predkoscX = -6;
-        kulki.predkoscY = -6;
-        
-        odtworzDzwiek(330); // DŸwiêk startu!
+        kulki[0].predkoscX = -6; // Nadajemy prêdkoœæ konkretnej kulce z tablicy!
+        kulki[0].predkoscY = -6;
+        odtworzDzwiek(330);
     }
 }, { passive: false });
+
+// 2. P£YNNE STEROWANIE PALETK¥ PRZY RUCHU (touchmove)
+canvas.addEventListener('touchmove', function(event) {
+    event.preventDefault();
+
+    if (stanGry !== 'GRA') return;
+
+    const rect = canvas.getBoundingClientRect();
+    let skalaX = canvas.width / rect.width;
+    
+    // POPRAWKA: U¿ywamy event.touches[0] dla stabilnego odczytu na iOS/Android
+    let touch = event.touches[0];
+    let dotykX = (touch.clientX - rect.left) * skalaX;
+
+    xP = dotykX - (szerokoscPaletki / 2);
+
+    if (xP < 0) xP = 0;
+    if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
+}, { passive: false });
+
+// 3. ZABEZPIECZENIE: Obs³uga zakoñczenia dotyku (touchend)
+canvas.addEventListener('touchend', function(event) {
+    event.preventDefault();
+}, { passive: false });
+
 
 
 /////////////////// FUNKCJA ANIMACJA
