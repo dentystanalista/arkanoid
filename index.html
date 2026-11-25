@@ -213,20 +213,22 @@ canvas.addEventListener('touchmove', function(event) {
     // 1. Ca³kowicie blokujemy domyœlne przesuwanie strony przez przegl¹darkê
     event.preventDefault();
 
-    const rect = canvas.getBoundingClientRect();
-    
-    // 2. OBLICZAMY SKALÊ: Dzielimy wirtualn¹ szerokoœæ (800) przez realn¹ szerokoœæ na ekranie
-    let skalaX = canvas.width / rect.width;
+    if (stanGry === 'MENU') {
+        stanGry = 'GRA';
+        odtworzDzwiek(440);
+        return; // Przerywamy, ¿eby nie wystrzeliæ kulki w tej samej milisekundzie!
+    }
 
-    // 3. Mno¿ymy pozycjê palca przez skalê, aby uzyskaæ idealny punkt wewn¹trz gry
-    let dotykX = (event.touches[0].clientX - rect.left) * skalaX;
-
-    // 4. Ustawiamy œrodek paletki pod palcem
-    xP = dotykX - (szerokoscPaletki / 2);
-
-    // 5. Granice ekranu
-    if (xP < 0) xP = 0;
-    if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
+    // 2. Jeœli trwa GRA, a kulka stoi na paletce - dotkniêcie dzia³a jak SPACJA
+    if (stanGry === 'GRA' && czyKulkaNaPaletce && kulki.length > 0) {
+        czyKulkaNaPaletce = false;
+        
+        // Szukamy naszej pierwszej kulki w tablicy i nadajemy jej pêd w górê
+        kulki.predkoscX = -6;
+        kulki.predkoscY = -6;
+        
+        odtworzDzwiek(330); // DŸwiêk startu!
+    }
 }, { passive: false });
 
 
@@ -595,9 +597,10 @@ if (stanGry === 'MENU') {
 
         ctx.fillStyle = 'white';
         ctx.font = '25px Arial';
-        ctx.fillText('Wciœnij ENTER, aby rozpocz¹æ grê', canvas.width / 2, canvas.height / 2);
-        ctx.fillText('Sterowanie: Strza³ki (ruch) | Spacja (strza³) | P (pauza)', canvas.width / 2, canvas.height / 2 + 50);
-
+        // Wewn¹trz funkcji rysujWynik() w sekcji stanGry === 'MENU'
+		ctx.fillText('Wcisnij ENTER lub DOTKNIJ EKRANU, aby rozpoczac', canvas.width / 2, canvas.height / 2);
+		ctx.fillText('Sterowanie: Strzalki / Przesuwanie palcem', canvas.width / 2, canvas.height / 2 + 50);
+        
         // Wyœwietlamy wczytany rekord ¿yciowy
         ctx.fillStyle = '#2ed573';
         ctx.fillText(`NAJLEPSZY WYNIK: ${najlepszyWynik}`, canvas.width / 2, canvas.height / 2 + 130);
