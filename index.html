@@ -34,6 +34,9 @@ let zycia = 3;
 let czyKulkaNaPaletce = true;
 let trybKlejacy = false; // Czy paletka ma w³¹czony magnes/klej
 
+let trybLaserowy = false; // Czy paletka ma zamontowane dzia³ka laserowe
+let pociski = [];         // Tablica na wystrzelone lasery lec¹ce w górê
+
 // Cegie³ki 
 const liczbaWierszy = 10;
 const liczbaKolumn = 10;
@@ -217,6 +220,13 @@ window.addEventListener('keydown', function(event) {
         }
         odtworzDzwiek(330);
     }
+	if (event.key === ' ' && stanGry === 'GRA' && trybLaserowy) {
+        // Tworzymy dwa pociski: z lewego i prawego brzegu paletki
+        pociski.push({ x: xP + 10, y: yP, predkoscY: -10, szerokosc: 8, wysokosc: 15 });
+        pociski.push({ x: xP + szerokoscPaletki - 14, y: yP, predkoscY: -10, szerokosc: 8, wysokosc: 15 });
+        odtworzDzwiek(660); // Wysoki dŸwiêk lasera!
+    }
+
 
 });
 window.addEventListener('keyup', function(event) {
@@ -257,6 +267,12 @@ canvas.addEventListener('touchstart', function(event) {
         }
         odtworzDzwiek(330);
     }
+	if (stanGry === 'GRA' && trybLaserowy) {
+        pociski.push({ x: xP + 10, y: yP, predkoscY: -10, szerokosc: 4, wysokosc: 15 });
+        pociski.push({ x: xP + szerokoscPaletki - 14, y: yP, predkoscY: -10, szerokosc: 4, wysokosc: 15 });
+        odtworzDzwiek(600);
+    }
+
 
 }, { passive: false });
 
@@ -331,6 +347,7 @@ function animacja() {
 
 	
     obslugaBonusow();
+	obslugaLaserow();
     rysujCegielki();
     Paletka();
 
@@ -356,7 +373,10 @@ function animacja() {
         // Lewa œciana
         if (k.x - k.promien < 0) {
             k.x = k.promien;                // ?? WYPYCHANIE: Ustawiamy kulkê idealnie przy krawêdzi
-            k.predkoscX *= -(1+przyspieszenie);               // Odwracamy kierunek
+            k.predkoscX *= -(1+przyspieszenie);  
+				if (k.predkoscY < 0.1 && k.predkoscY > -0.1) {
+					k.predkoscY *=2
+					}// Odwracamy kierunek
             odtworzDzwiek(330);
         }
         
@@ -436,9 +456,10 @@ function rysujKulki() {
 }
 
 function Paletka() {
-    ctx.fillStyle = 'blue';
+    ctx.fillStyle = trybLaserowy ? '#a040ff' : 'blue'; // Fioletowa, gdy strzela!
     ctx.fillRect(xP, yP, szerokoscPaletki, 40);
 }
+
 
 function rysujCegielki() {
     const grafikiCegiel = [null, imgCeglaZielona, imgCeglaPomaranczowa, imgCeglaCzerwona, imgCeglaNiebieska, imgCeglaFioletowa];
@@ -450,6 +471,50 @@ function rysujCegielki() {
 				let obrazek = grafikiCegiel[b.zycia];
                 ctx.drawImage(obrazek, b.x, b.y, szerokoscCegly, wysokoscCegly);
             }
+        }
+    }
+}
+function obslugaLaserow() {
+    for (let i = pociski.length - 1; i >= 0; i--) {
+        let p = pociski[i];
+        
+        // 1. Ruch lasera w górê
+        p.y += p.predkoscY;
+        
+        // 2. Rysowanie lasera jako fioletowy œwiec¹cy pasek
+        ctx.fillStyle = '#a040ff';
+        ctx.fillRect(p.x, p.y, p.szerokosc, p.wysokosc);
+        
+        // 3. Kolizja z cegie³kami
+        for (let c = 0; c < liczbaKolumn; c++) {
+            for (let r = 0; r < liczbaWierszy; r++) {
+                let b = cegielki[c][r];
+                
+                if (b && b.zycia > 0) {
+                    // Sprawdzamy prostok¹tn¹ kolizjê pocisku z klockiem
+                    if (
+                        p.x + p.szerokosc > b.x &&
+                        p.x < b.x + szerokoscCegly &&
+                        p.y + p.wysokosc > b.y &&
+                        p.y < b.y + wysokoscCegly
+                    ) {
+                        // Trafienie!
+                        if (b.zycia !== 99) { // Stal jest odporna na lasery!
+                            b.zycia--;
+                            if (b.zycia === 0) punkty++;
+                        }
+                        
+                        odtworzDzwiek(480);
+                        pociski.splice(i, 1); // Usuwamy pocisk z ekranu
+                        return; // Przerywamy sprawdzanie dla tego pocisku
+                    }
+                }
+            }
+        }
+        
+        // 4. Usuwanie pocisków, które wylecia³y za górn¹ krawêdŸ ekranu
+        if (p.y < 0) {
+            pociski.splice(i, 1);
         }
     }
 }
@@ -677,6 +742,18 @@ function obslugaBonusow() {
                 odtworzDzwiek(180);
                 setTimeout(function() { odtworzDzwiek(130); }, 100);
             }
+			else if (bon.typ === 'laserowaPaletka') {
+                trybLaserowy = true;
+                
+                // Po 9 sekundach dzia³ka laserowe znikaj¹
+                setTimeout(function() {
+                    trybLaserowy = false;
+                }, 9000);
+                
+                odtworzDzwiek(440);
+                setTimeout(function() { odtworzDzwiek(660); }, 80);
+            }
+
 
 
 
