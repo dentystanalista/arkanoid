@@ -24,7 +24,7 @@ const tlaPoziomow = [
 ];
 
 const predkosc = 15;
-const przyspieszenie = 0.01; // o ile przyspiesza kulka
+const przyspieszenie = 0.008; // o ile przyspiesza kulka
 const imgKulka = new Image();
 imgKulka.src ='kulka.png';
 
@@ -32,6 +32,7 @@ let stanGry = 'MENU';
 let najlepszyWynik = localStorage.getItem('arkanoidHighScore') || 0; 
 let zycia = 3;
 let czyKulkaNaPaletce = true;
+let trybKlejacy = false; // Czy paletka ma w³¹czony magnes/klej
 
 // Cegie³ki 
 const liczbaWierszy = 10;
@@ -195,13 +196,28 @@ window.addEventListener('keydown', function(event) {
 	czyPauza = !czyPauza;
 	odtworzDzwiek(220);
 	}
-	//wystrzekeni kulki
-	if (event.key === ' ' && czyKulkaNaPaletce && kulki.length > 0 && stanGry === 'GRA') {
-    czyKulkaNaPaletce = false;
-    kulki[0].predkoscX = -5; // Nadajemy startow¹ prêdkoœæ
-    kulki[0].predkoscY = -5;
-    odtworzDzwiek(330);      // DŸwiêk startu!
+	    // WYSTRZELENIE KULKI SPACJ¥
+    if (event.key === ' ' && czyKulkaNaPaletce && stanGry === 'GRA') {
+        czyKulkaNaPaletce = false;
+        
+        for (let j = 0; j < kulki.length; j++) {
+            let k = kulki[j];
+            // Wystrzeliwujemy tylko te kulki, które aktualnie stoj¹ na paletce
+            if (k.predkoscX === 0 && k.predkoscY === 0) {
+                let punktTrafienia = k.klejOffset - (szerokoscPaletki / 2);
+                let znormalizowaneTrafienie = punktTrafienia / (szerokoscPaletki / 2);
+                let katOdbicia = znormalizowaneTrafienie * (Math.PI / 3);
+                
+                // Sta³a bazowa prêdkoœæ wystrza³u (np. wypadkowa 8.5)
+                let startowaPredkosc = 8.5; 
+
+                k.predkoscX = startowaPredkosc * Math.sin(katOdbicia);
+                k.predkoscY = -startowaPredkosc * Math.cos(katOdbicia);
+            }
+        }
+        odtworzDzwiek(330);
     }
+
 });
 window.addEventListener('keyup', function(event) {
     if (event.key === 'ArrowRight') prawoWcisniete = false;
@@ -223,12 +239,25 @@ canvas.addEventListener('touchstart', function(event) {
     }
 
     // POPRAWKA: Odwo³ujemy siê do pierwszej kulki w tablicy kulki[0]
-    if (stanGry === 'GRA' && czyKulkaNaPaletce && kulki.length > 0) {
+    // Jeœli trwa GRA, a kulka stoi na paletce - dotkniêcie dzia³a jak SPACJA
+    if (stanGry === 'GRA' && czyKulkaNaPaletce) {
         czyKulkaNaPaletce = false;
-        kulki[0].predkoscX = -6; // Nadajemy prêdkoœæ konkretnej kulce z tablicy!
-        kulki[0].predkoscY = -6;
+        
+        for (let j = 0; j < kulki.length; j++) {
+            let k = kulki[j];
+            if (k.predkoscX === 0 && k.predkoscY === 0) {
+                let punktTrafienia = k.klejOffset - (szerokoscPaletki / 2);
+                let znormalizowaneTrafienie = punktTrafienia / (szerokoscPaletki / 2);
+                let katOdbicia = znormalizowaneTrafienie * (Math.PI / 3);
+                let startowaPredkosc = 8.5;
+
+                k.predkoscX = startowaPredkosc * Math.sin(katOdbicia);
+                k.predkoscY = -startowaPredkosc * Math.cos(katOdbicia);
+            }
+        }
         odtworzDzwiek(330);
     }
+
 }, { passive: false });
 
 // 2. P£YNNE STEROWANIE PALETK¥ PRZY RUCHU (touchmove)
@@ -283,10 +312,23 @@ function animacja() {
     if (xP > canvas.width - szerokoscPaletki) xP = canvas.width - szerokoscPaletki;
     if (xP < 0) xP = 0;
 	// kulka na paletce
-	if (czyKulkaNaPaletce && kulki.length > 0) {
-    kulki[0].x = xP + szerokoscPaletki / 2;
-    kulki[0].y = yP - kulki[0].promien;
-}
+    // A) NA POCZ¥TKU pêtli animacja() - aktualizacja pozycji przyklejonych kulek
+    if (czyKulkaNaPaletce) {
+        for (let j = 0; j < kulki.length; j++) {
+            let k = kulki[j];
+            // Jeœli kulka stoi w miejscu (jest przyklejona)
+            if (k.predkoscX === 0 && k.predkoscY === 0) {
+                // Jeœli jakimœ cudem nie ma jeszcze offsetu (np. na samym starcie gry), dajemy œrodek
+                if (k.klejOffset === undefined) {
+                    k.klejOffset = szerokoscPaletki / 2;
+                }
+                // Kulka jedzie dok³adnie tam, gdzie siê przyklei³a wzglêdem xP
+                k.x = xP + k.klejOffset;
+                k.y = yP - k.promien;
+            }
+        }
+    }
+
 	
     obslugaBonusow();
     rysujCegielki();
@@ -326,16 +368,30 @@ function animacja() {
         }
 
         // --- Odbijanie od paletki ---
-        if (k.y + k.promien >= yP && k.y < yP + 40 && k.x >= xP && k.x <= xP + szerokoscPaletki && !czyKulkaNaPaletce) {
-            let punktTrafienia = k.x - (xP + (szerokoscPaletki / 2));
-            let znormalizowaneTrafienie = punktTrafienia / (szerokoscPaletki / 2);
-            let katOdbicia = znormalizowaneTrafienie * (Math.PI / 3);
-            let aktualnaPredkosc = Math.sqrt(k.predkoscX ** 2 + k.predkoscY ** 2);
+        // --- Odbijanie od paletki (wewn¹trz pêtli for dla kulek w animacja()) ---
+        if (!czyKulkaNaPaletce && k.y + k.promien >= yP && k.y < yP + 40 && k.x >= xP && k.x <= xP + szerokoscPaletki) {
+            
+            if (trybKlejacy) {
+                // ?? EFEKT KLEJU: Kulka przykleja siê do paletki!
+                czyKulkaNaPaletce = true;
+                k.predkoscX = 0;
+                k.predkoscY = 0;
+				// Zapamiêtujemy odleg³oœæ kulki od LEWEJ krawêdzi paletki
+                k.klejOffset = k.x - xP; 
+                odtworzDzwiek(180); // Niski, magnetyczny dŸwiêk z³apania
+            } else {
+                // STANDARDOWE ODBICIE K¥TAMI (Twój dotychczasowy kod)
+                let punktTrafienia = k.x - (xP + (szerokoscPaletki / 2));
+                let znormalizowaneTrafienie = punktTrafienia / (szerokoscPaletki / 2);
+                let katOdbicia = znormalizowaneTrafienie * (Math.PI / 3);
+                let aktualnaPredkosc = Math.sqrt(k.predkoscX ** 2 + k.predkoscY ** 2);
 
-            k.predkoscX = aktualnaPredkosc * Math.sin(katOdbicia) * 1.005;
-            k.predkoscY = -aktualnaPredkosc * Math.cos(katOdbicia) * 1.005;
-			odtworzDzwiek(180);
+                k.predkoscX = aktualnaPredkosc * Math.sin(katOdbicia);
+                k.predkoscY = -aktualnaPredkosc * Math.cos(katOdbicia);
+                odtworzDzwiek(220);
+            }
         }
+
 
         // --- SPADEK W PRZEPAŒÆ ---
         if (k.y - k.promien > canvas.height) {
@@ -452,31 +508,58 @@ function sprawdzKolizjeZCegielkami(k) {
 							}
 
 							// 25% szans na wypadniêcie bonusu
-							if (Math.random() < 0.25) {
-								let losSzansy = Math.random();
-								let wybranyTyp = '';
-								let kolorBonusu = '';
-								
-								if (losSzansy < 0.4) {
-									wybranyTyp = 'duzaPaletka';
-									kolorBonusu = '#a040ff';
-								} else if (losSzansy < 0.8) {
-									wybranyTyp = 'wolnaKulka';
-									kolorBonusu = '#2ed573';
-								} else {
-									wybranyTyp = 'trzyKulki';
-									kolorBonusu = '#ffa502'; // z³oty
-								}
+                        if (Math.random() < 0.25) {
+                            let losSzansy = Math.random(); // Losuje liczbê od 0.0 do 1.0
+                            let wybranyTyp = '';
+                            let kolorBonusu = '';
+                            
+                            // 1. DU¯A PALETKA (19% szans -> przedzia³ 0.00 - 0.19)
+                            if (losSzansy < 0.19) {
+                                wybranyTyp = 'duzaPaletka';
+                                kolorBonusu = '#000080'; // Granatowy
+                            } 
+                            // 2. MA£A PALETKA (15% szans -> przedzia³ 0.19 - 0.34)
+                            else if (losSzansy < 0.34) {
+                                wybranyTyp = 'malaPaletka';
+                                kolorBonusu = '#00d2ff'; // B³êkitny
+                            } 
+                            // 3. WOLNA KULKA (15% szans -> przedzia³ 0.34 - 0.49)
+                            else if (losSzansy < 0.49) {
+                                wybranyTyp = 'wolnaKulka';
+                                kolorBonusu = '#f5f5dc'; // Be¿owy
+                            } 
+                            // 4. TRZY KULKI (15% szans -> przedzia³ 0.49 - 0.64)
+                            else if (losSzansy < 0.64) {
+                                wybranyTyp = 'trzyKulki';
+                                kolorBonusu = '#ff7f50'; // Pomarañczowy
+                            } 
+                            // 5. KLEJ¥CA PALETKA (15% szans -> przedzia³ 0.64 - 0.79)
+                            else if (losSzansy < 0.79) {
+                                wybranyTyp = 'klejacaPaletka';
+                                kolorBonusu = '#2ed573'; // Zielony
+                            } 
+                            // 6. EXTRA ¯YCIE (1% szans -> przedzia³ 0.79 - 0.80)
+                            else if (losSzansy < 0.80) {
+                                wybranyTyp = 'extraZycie';
+                                kolorBonusu = '#ffa502'; // Z³oty
+                            } 
+                            // 7. LASEROWA PALETKA (Pozosta³e 20% szans -> przedzia³ 0.80 - 1.00)
+                            else {
+                                wybranyTyp = 'laserowaPaletka';
+                                kolorBonusu = '#a040ff'; // Fioletowy
+                            }
 
-								bonusy.push({
-									x: b.x + szerokoscCegly / 2,
-									y: b.y,
-									promien: 10,
-									predkoscY: 3,
-									typ: wybranyTyp,
-									kolor: kolorBonusu
-								});
-							}
+                            // Wrzucamy wylosowan¹ pigu³kê do tablicy spadaj¹cych bonusów
+                            bonusy.push({
+                                x: b.x + szerokoscCegly / 2,
+                                y: b.y,
+                                promien: 10,
+                                predkoscY: 3,
+                                typ: wybranyTyp,
+                                kolor: kolorBonusu
+                            });
+                        }
+
 						}
 						return;
 					}
@@ -557,6 +640,44 @@ function obslugaBonusow() {
                     odtworzDzwiek(587); // Triumfalny dŸwiêk rozbicia na 3 kulki!
                 }
             }
+			else if (bon.typ === 'klejacaPaletka') {
+                trybKlejacy = true;
+                
+                // Opcjonalnie: Wy³¹czamy magnes po 12 sekundach, ¿eby gra nie by³a za ³atwa
+                setTimeout(function() {
+                    trybKlejacy = false;
+                }, 12000);
+            }
+			            else if (bon.typ === 'extraZycie') {
+                // Dodajemy jedno ¿ycie do licznika gracza
+                zycia++;
+                
+                // Odtwarzamy wyj¹tkowo wysoki, triumfalny dŸwiêk (jak moneta w Mario!)
+                odtworzDzwiek(880); 
+                
+                // Ma³y trik: Mo¿esz te¿ na chwilê odtworzyæ drugi dŸwiêk zaraz po nim, 
+                // tworz¹c klasyczne retro dwutonowe "brzdêk!"
+                setTimeout(function() {
+                    odtworzDzwiek(1320);
+                }, 80);
+            }
+			else if (bon.typ === 'malaPaletka') {
+                // Skracamy paletkê! (Pilnujemy, ¿eby nie by³a krótsza ni¿ np. 100px, 
+                // bo wtedy gra sta³aby siê niemal niemo¿liwa)
+                if (szerokoscPaletki > 100) {
+                    szerokoscPaletki -= 40;
+                    
+                    // Po 8 sekundach przywracamy zabrane 40 pikseli
+                    setTimeout(function() {
+                        szerokoscPaletki += 40;
+                    }, 8000);
+                }
+                
+                // Smutny, opadaj¹cy dŸwiêk retro sygnalizuj¹cy utrudnienie
+                odtworzDzwiek(180);
+                setTimeout(function() { odtworzDzwiek(130); }, 100);
+            }
+
 
 
             bonusy.splice(i, 1);
